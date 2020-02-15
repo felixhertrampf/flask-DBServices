@@ -12,43 +12,37 @@ class DBService:
         self.db = flask_db
 
     def add(self, model) -> Model:
-        return self._commit(add=model)
+        try:
+            self.db.session.add(model)
+            self.db.session.commit()
+            return model
+        except IntegrityError:
+            self.rollback()
+
+        return None
 
     def update(self, model) -> db.Model:
-        return self._commit(merge=model)
+        try:
+            self.db.session.merge(model)
+            self.db.session.commit()
+            return model
+        except IntegrityError:
+            self.rollback()
+
+        return None
 
     def delete(self, model) -> bool:
-        return self._commit(delete=model)
+        try:
+            self.db.session.delete(model)
+            self.db.session.commit()
+            return True
+        except IntegrityError:
+            self.rollback()
+
+        return False
 
     def commit(self):
         self.db.session.commit()
 
     def rollback(self):
         self.db.session.rollback()
-
-    def _commit(self,
-                merge: Model = None,
-                add: Model = None,
-                delete: Model = None) -> Model:
-        try:
-
-            if merge:
-                self.db.session.merge(merge)
-            if add:
-                self.db.session.add(add)
-            if delete:
-                self.db.session.delete(delete)
-
-            self.commit()
-        except IntegrityError:
-            self.rollback()
-            return None
-
-        if merge:
-            return merge
-        if add:
-            return add
-        if delete:
-            return delete
-
-        return None
